@@ -1,0 +1,52 @@
+name: Build and Run SpringOS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Step 2: Set up NASM
+    - name: Set up NASM
+      uses: ilammy/setup-nasm@v1.5.1
+      with:
+        version: 2.16.01
+
+    # Step 3: Assemble the bootloader
+    - name: Assemble Bootloader
+      run: |
+        nasm -f bin boot.asm -o boot.bin
+
+    # Step 4: Assemble the kernel
+    - name: Assemble Kernel
+      run: |
+        nasm -f bin springOS.asm -o springOS.bin
+
+    # Step 5: Create a bootable floppy disk image
+    - name: Create Bootable Floppy Disk Image
+      run: |
+        dd if=/dev/zero of=springOS.img bs=512 count=2880            # Create a blank 1.44MB floppy image
+        dd if=boot.bin of=springOS.img conv=notrunc                 # Write bootloader to the first sector
+        dd if=springOS.bin of=springOS.img seek=1 conv=notrunc      # Write kernel starting from the second sector
+
+    # Step 6: Run the bootable image using QEMU
+    - name: Run with QEMU
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y qemu-system-x86                     # Install QEMU on the runner
+        qemu-system-x86_64 -fda springOS.img                        # Run the floppy image
+
+    # Step 7: Upload the bootable image for testing in Copy.sh
+    - name: Upload Boot Image for Copy.sh Emulator
+      uses: actions/upload-artifact@v3
+      with:
+        name: springOS.img
+        path: springOS.img

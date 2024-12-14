@@ -66,7 +66,7 @@ SpringOS retains compatibility with the following commands:
 
 ## Acknowledgments
 
-This project is a fork of the original bootLogo by Oscar Toledo G., whose work is an inspiration in compact software design. Special thanks to:
+This project is a fork of the original bootLogo by Oscar Toledo G, whose work is an inspiration in compact software design. Special thanks to:
 
 - The open-source community for keeping retro programming alive.
 - Oscar Toledo G. for the original design of bootLogo.

@@ -1,4 +1,4 @@
-; boot.asm
+; cmd.asm - (this is the final update i swear ty)
 
 section .text
    global _start

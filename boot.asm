@@ -1,19 +1,22 @@
-; boot.asm - not so shitty no more LOL
+; boot.asm - boot.asm but bad
 
 section .text
     global _start
 
 _start:
     ; Set up the video mode (text mode)
-    mov ax, 0x0003  ; Set video mode to 80x25 text mode
-    int 0x10        ; BIOS interrupt
+    mov ax, 0x0003       ; Set video mode to 80x25 text mode
+    int 0x10             ; BIOS interrupt
+
+    ; Display a splash screen
+    call splash_screen
 
     ; Print "Welcome to SpringOS!"
-    mov si, message  ; Load the address of the message
-    call print_string ; Call the print function
+    mov si, welcome_msg  ; Load the address of the message
+    call print_string    ; Call the print function
 
-    ; Display a graphical logo
-    call display_logo
+    ; Perform a memory check
+    call memory_check
 
     ; Load and execute the kernel
     mov ax, 0x0800       ; Segment where the kernel will be loaded
@@ -36,6 +39,21 @@ disk_error:
     call print_string
     hlt                 ; Halt the CPU
 
+memory_check:
+    ; Check and display available memory
+    mov ah, 0x88         ; BIOS function to get extended memory size
+    int 0x15
+    mov si, mem_msg
+    call print_string
+    mov ax, cx          ; Store extended memory in AX
+    call print_hex       ; Print memory size in KB
+    ret
+
+splash_screen:
+    mov si, splash_msg
+    call print_string
+    ret
+
 hang:
     jmp hang             ; Infinite loop
 
@@ -44,23 +62,34 @@ print_string:
     mov ah, 0x0E         ; BIOS teletype function
 .next_char:
     lodsb                ; Load byte at DS:SI into AL and increment SI
-    cmp al, 0           ; Check for null terminator
-    je .done            ; If null, we're done
-    int 0x10            ; Print the character in AL
-    jmp .next_char      ; Repeat for the next character
+    cmp al, 0            ; Check for null terminator
+    je .done             ; If null, we're done
+    int 0x10             ; Print the character in AL
+    jmp .next_char       ; Repeat for the next character
 .done:
     ret
 
-display_logo:
-    ; ASCII art logo representation
-    mov si, logo
-    call print_string
+print_hex:
+    ; Print AX in hexadecimal format
+    push ax
+    mov cx, 4            ; Four hexadecimal digits
+.next_digit:
+    rol ax, 4            ; Rotate left by 4 bits
+    mov bl, al           ; Copy the lowest nibble to BL
+    and bl, 0x0F         ; Mask the lower 4 bits
+    add bl, '0'          ; Convert to ASCII
+    cmp bl, '9'
+    jbe .print
+    add bl, 7            ; Adjust for A-F
+.print:
+    mov ah, 0x0E
+    int 0x10
+    loop .next_digit
+    pop ax
     ret
 
 section .data
-message db 'Welcome to SpringOS!', 0  ; Null-terminated string
+welcome_msg db 'Welcome to SpringOS!', 0
 error_msg db 'Disk error! Halting...', 0
-logo db '    ****    ', 0x0A
-     db '  *      *  ', 0x0A
-     db '  *      *  ', 0x0A
-     db '    ****    ', 0
+mem_msg db 'Available memory: ', 0
+splash_msg db '*** SpringOS Bootloader ***', 0

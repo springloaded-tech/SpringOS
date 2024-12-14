@@ -1,148 +1,76 @@
-     _                 _   _
-    | |               | | | |
-    | |__   ___   ___ | |_| |     ___   __ _  ___
-    | '_ \ / _ \ / _ \| __| |    / _ \ / _` |/ _ \
-    | |_) | (_) | (_) | |_| |___| (_) | (_| | (_) |
-    |_.__/ \___/ \___/ \__\_____/\___/ \__, |\___/
-                                    __/ |
-                                   |___/
-### bootLogo interpreter in 512 bytes (boot sector or COM file)
+# SpringOS
+---
+**by SpringLoaded Tech**
 
-*by Oscar Toledo G. Mar/18/2024*
+SpringOS is a fork of the bootLogo interpreter by Oscar Toledo G., built to showcase the capabilities of compact software design in an operating system environment.
 
-http://nanochess.org
+This lightweight OS fits within 512 bytes(or more depending on stuff like code changes), maintaining support for the Logo programming language while incorporating unique enhancements from SpringLoaded Tech.
 
-https://github.com/nanochess
+---
 
-This is a small interpreter of Logo language.
+## Key Features
 
-It's compatible with the 8088 processor (the original IBM PC), and it even works on CGA mode!
+- **Lightweight Design**: Entire OS and interpreter fit within a boot sector or `.COM` file.
+- **Logo Programming**: Supports classic commands like `FD`, `BK`, `RT`, `LT`, `PU`, `PD`, `REPEAT`, `SETCOLOR`, and custom procedures with `TO`/`END`.
+- **Custom Enhancements**: Additional features (TBD, based on your changes to bootLogo).
+- **Compatibility**: Runs on 8088 processors and supports CGA/EGA/VGA video modes.
+- **Customizable**: Parameters like `video_mode`, `color1`, and `color2` can be modified to suit your needs.
 
-If you want to assemble it, you must download the Netwide Assembler (NASM) from www.nasm.us
+---
 
-Use this command line:
+## Assembly Instructions
 
-    nasm -f bin bootlogo.asm -Dcom_file=1 -o bootlogo.com
-    nasm -f bin bootlogo.asm -Dcom_file=0 -o bootlogo.img
+To build SpringOS, you’ll need the Netwide Assembler (NASM). Download it from [nasm.us](http://www.nasm.us).
 
-Tested with VirtualBox for macOS running Windows XP running this interpreter, it also works with DOSBox and probably with QEMU:
+Use the following commands to assemble:
 
-    qemu-system-x86_64 -fda bootlogo.img
+```bash
+nasm -f bin springOS.asm -Dcom_file=1 -o springOS.com
+nasm -f bin springOS.asm -Dcom_file=0 -o springOS.img
+```
 
-You can set also the following labels:
+---
 
-* video_mode. This sets the video mode used for bootLogo (default = 4 for CGA mode 320x200x4 colors). A good alternative is 13 (EGA/VGA 320x200x16 mode).
-* color1. This sets the color for the letters in the command line (default = 1 for CGA mode)
-* color2. This sets the color for line drawing (default = 3 for CGA mode)
+## Running SpringOS
 
-Enjoy it!
+SpringOS can be tested in various environments:
 
-## User's manual
+- **QEMU**:  
+  ```bash
+  qemu-system-x86_64 -fda springOS.img
+  ```
 
-Line entry is done with the keyboard, finish the line with Enter.
+- **DOSBox**:  
+  Run `springOS.com` from the DOSBox command line.
 
-Backspace can be used to correct mistakes.
+- **VirtualBox**:  
+  Boot from `springOS.img`.
 
-The following commands are implemented:
+---
 
-### CLEARSCREEN
+## Logo Commands in SpringOS
 
-Clears the screen and returns the turtle to the center, and pointing to the north. This command can only be used alone.
+SpringOS retains compatibility with the following commands:
 
-### FD 40
+- **CLEARSCREEN**: Clears the screen, resets the turtle to the center, and points it north.
+- **FD [pixels]**: Moves the turtle forward.
+- **BK [pixels]**: Moves the turtle backward.
+- **RT [degrees]**: Rotates the turtle clockwise.
+- **LT [degrees]**: Rotates the turtle counterclockwise.
+- **PU / PD**: Pen up/down to toggle drawing.
+- **SETCOLOR [index]**: Sets the drawing color (0–3 for CGA, 0–15 for EGA/VGA).
+- **REPEAT [n] [commands]**: Repeats a set of commands.
+- **TO [name] [commands] END**: Defines custom procedures.
 
-Move the turtle 40 pixels ahead. Caveat: If you use zero, it will be taken as 65536 pixels.
-
-### BK 40
-
-Move the turtle 40 pixels backward. Caveat: If you use zero, it will be taken as 65536 pixels.
-
-### RT 25
-
-Rotate the turtle  25 degrees clockwise.
-
-### LT 25
-
-Rotate the turtle 25 degrees counterclockwise.
-
-### REPEAT 10 FD 10
-
-Repeat 10 times FD 10
-
-### REPEAT 10 [FD 10 RT 20]
-
-Repeat 10 times FD 10 RT 20. REPEAT can be nested. If you somehow miss the final ] character then bootLogo will crash.
-
-### PU
-
-Pen up. The turtle doesn't draw for following commands.
-
-### PD
-
-Pen down. The turtle draws again.
-
-### SETCOLOR 2
-
-Set color for pen. Only 0-3 available in CGA, and 0-15 for EGA/VGA.
-
-### TO [name] [command or list of commands] END
-
-This command allows you to define procedures. All the definition should fit inside one line (120 characters).
-
-A single command could be a REPEAT. Several commands can be grouped using [ and ].
-
-Only the two first letters of the name are taken in account. The predefined commands have priority (so you cannot define them out). Also, once defined a procedure, it cannot be edited again (sorry, lack of space).
-
-For example:
-
-    TO CURVE REPEAT 4 [LT 10 FD 10] END
-    TO PETAL [CURVE LT 140 CURVE] END
-    TO FLOWER REPEAT 4 [PETAL LT 50] END
-    FLOWER
-    RT 180
-    FD 50
-    RT 140
-    PETAL
-    PU
-    FD 50
-    
-### QUIT
-
-Exit to command line (only .COM version)
-
-## Examples
-
-![bootLogo command sequence](example3.png)
-
-![Result of bootLogo command sequence](example4.png)
+---
 
 ## Acknowledgments
 
-* jcmeyrignac for an idea to make smaller the number decoding.
-* Jim Leonard (MobyGamer) for making me thinking about a higher-precision sin function, and suggesting me the use of the Set Pixel BIOS service.
-* raulamd for reminding me that cubicDoom had a smaller sin function.
+This project is a fork of the original bootLogo by Oscar Toledo G., whose work is an inspiration in compact software design. Special thanks to:
 
-## More on this?
+- The open-source community for keeping retro programming alive.
+- Oscar Toledo G. for the original design of bootLogo.
 
-Do you want to learn 8086/8088 assembler? Get my book Programming Boot Sector Games containing an 8086/8088 crash course!
+---
 
-Now available from Lulu:
-
-[Paperback book](http://www.lulu.com/shop/oscar-toledo-gutierrez/programming-boot-sector-games/paperback/product-24188564.html)
-
-[Hard-cover book](http://www.lulu.com/shop/oscar-toledo-gutierrez/programming-boot-sector-games/hardcover/product-24188530.html)
-
-[eBook](https://nanochess.org/store.html)
-
-These are some of the example programs documented profusely
-in the book:
-
-  * Guess the number.
-  * Tic-Tac-Toe game.
-  * Text graphics.
-  * Mandelbrot set.
-  * F-Bird game.
-  * Invaders game.
-  * Pillman game.
-  * Toledo Atomchess.
-  * bootBASIC language.
+Enjoy exploring **SpringOS**, brought to you by **SpringLoaded Tech**. Feel free to contribute or suggest features!

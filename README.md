@@ -1,76 +1,111 @@
-# SpringOS
----
+# **SpringOS**  
 **by SpringLoaded Tech**
 
-SpringOS is a fork of the bootLogo interpreter by Oscar Toledo G., built to showcase the capabilities of compact software design in an operating system environment.
-
-This lightweight OS fits within 512 bytes(or more depending on stuff like code changes), maintaining support for the Logo programming language while incorporating unique enhancements from SpringLoaded Tech.
+SpringOS is a minimalist operating system inspired by **bootLogo**, designed to fit within a boot sector (512 bytes) while providing a lightweight environment for experimentation with low-level system programming. SpringOS is perfect for developers who want to explore compact OS design and assembly language, while maintaining support for a basic interpreter.
 
 ---
 
-## Key Features
+## **Key Features**
 
-- **Lightweight Design**: Entire OS and interpreter fit within a boot sector or `.COM` file.
-- **Logo Programming**: Supports classic commands like `FD`, `BK`, `RT`, `LT`, `PU`, `PD`, `REPEAT`, `SETCOLOR`, and custom procedures with `TO`/`END`.
-- **Custom Enhancements**: Additional features (TBD, based on your changes to bootLogo).
-- **Compatibility**: Runs on 8088 processors and supports CGA/EGA/VGA video modes.
-- **Customizable**: Parameters like `video_mode`, `color1`, and `color2` can be modified to suit your needs.
+- **Minimalist Design**: Entire OS fits within a boot sector (512 bytes) or `.COM` file.
+- **Customizable Bootloader**: Includes an efficient bootloader for loading a small interpreter.
+- **Lightweight Interpreter**: Runs simple commands and custom procedures in a minimal environment.
+- **Cross-Platform Compatibility**: Works on real hardware (8088 processor or higher) and emulators like QEMU and DOSBox.
+- **Configurable Parameters**: Modify parameters such as `video_mode` and colors for customization.
 
 ---
 
-## Assembly Instructions
+## **System Requirements**
 
-To build SpringOS, you’ll need the Netwide Assembler (NASM). Download it from [nasm.us](http://www.nasm.us).
+- **Processor**: 8088 or higher.
+- **Graphics**: CGA, EGA, or VGA compatible display.
+- **Memory**: Minimal (fits within a 512-byte boot sector for the OS).
+- **Supported Platforms**: QEMU, DOSBox, VirtualBox, and real 8088 hardware.
 
-Use the following commands to assemble:
+---
 
+## **Assembly Instructions**
+
+SpringOS is built using the **Netwide Assembler (NASM)**. You can download it from [nasm.us](http://www.nasm.us).
+
+### Build Commands:
+To assemble SpringOS, run the following commands:
+
+1. **Create a `.COM` file for DOSBox or other DOS-compatible environments:**
+   ```bash
+   nasm -f bin springOS.asm -Dcom_file=1 -o springOS.com
+   ```
+
+2. **Create a bootable `.IMG` file for use in emulators or on real hardware:**
+   ```bash
+   nasm -f bin springOS.asm -Dcom_file=0 -o springOS.img
+   ```
+
+---
+
+## **Running SpringOS**
+
+SpringOS can be tested in several environments:
+
+### **QEMU**:
+Run SpringOS with QEMU using the following command:
 ```bash
-nasm -f bin springOS.asm -Dcom_file=1 -o springOS.com
-nasm -f bin springOS.asm -Dcom_file=0 -o springOS.img
+qemu-system-x86_64 -fda springOS.img
 ```
 
----
+### **DOSBox** (for `.COM` file):
+Run the `.COM` file using:
+```bash
+springOS.com
+```
 
-## Running SpringOS
-
-SpringOS can be tested in various environments:
-
-- **QEMU**:  
-  ```bash
-  qemu-system-x86_64 -fda springOS.img
-  ```
-
-- **DOSBox**:  
-  Run `springOS.com` from the DOSBox command line.
-
-- **VirtualBox**:  
-  Boot from `springOS.img`.
+### **VirtualBox** (for bootable `.IMG`):
+1. Create a new virtual machine.
+2. Set the storage to boot from `springOS.img`.
+3. Start the VM.
 
 ---
 
-## Logo Commands in SpringOS
+## **How SpringOS Works**
 
-SpringOS retains compatibility with the following commands:
+SpringOS functions as a simple bootloader that initializes the system and loads the interpreter. The interpreter can execute simple commands in a minimalistic, yet functional environment.
 
-- **CLEARSCREEN**: Clears the screen, resets the turtle to the center, and points it north.
-- **FD [pixels]**: Moves the turtle forward.
-- **BK [pixels]**: Moves the turtle backward.
-- **RT [degrees]**: Rotates the turtle clockwise.
-- **LT [degrees]**: Rotates the turtle counterclockwise.
-- **PU / PD**: Pen up/down to toggle drawing.
-- **SETCOLOR [index]**: Sets the drawing color (0–3 for CGA, 0–15 for EGA/VGA).
-- **REPEAT [n] [commands]**: Repeats a set of commands.
-- **TO [name] [commands] END**: Defines custom procedures.
+**Boot Process**:
+- The bootloader initializes the CPU and video mode.
+- It loads and runs the interpreter from a small binary, allowing for basic output to the screen.
+- SpringOS can be extended with custom commands, though it remains lightweight to demonstrate the principles of compact OS design.
 
 ---
 
-## Acknowledgments
+## **Future Enhancements**
 
-This project is a fork of the original bootLogo by Oscar Toledo G, whose work is an inspiration in compact software design. Special thanks to:
+While SpringOS is minimal by design, future updates may include:
+- **Enhanced Graphics**: Support for more video modes and graphical output.
+- **User-defined Commands**: Extending the interpreter to allow for custom commands and more complex interactions.
+- **Expanded OS Features**: Add more functionality such as file handling, additional hardware support, or a more powerful interpreter.
 
-- The open-source community for keeping retro programming alive.
-- Oscar Toledo G. for the original design of bootLogo.
+Feel free to contribute or suggest new features!
 
 ---
 
-Enjoy exploring **SpringOS**, brought to you by **SpringLoaded Tech**. Feel free to contribute or suggest features!
+## **Acknowledgments**
+
+This project is a fork of the **bootLogo** interpreter by **Oscar Toledo G.**. Special thanks to:
+- **Oscar Toledo G.** for the original bootLogo design.
+- The open-source community for their contributions to retro programming and system design.
+
+---
+
+## **Contributing**
+
+We welcome contributions! To improve SpringOS:
+1. Fork the repository.
+2. Create a new branch for your changes.
+3. Submit a pull request.
+
+Feel free to open issues for suggestions or bugs.
+
+---
+
+Enjoy exploring **SpringOS**. Lightweight, fast, and perfect for low-level system programming. 🌱
+loader design and basic OS features, while leaving out the Logo-specific commands. If you need any more changes or want to add other details, just let me know!

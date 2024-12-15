@@ -1,95 +1,61 @@
-; boot.asm - boot.asm but bad
+; boot.asm - G.O.O.D music
+
+[org 0x7C00]
+[bits 16]
 
 section .text
-    global _start
+global _start
 
 _start:
-    ; Set up the video mode (text mode)
-    mov ax, 0x0003       ; Set video mode to 80x25 text mode
-    int 0x10             ; BIOS interrupt
+    ; Set up segments
+    xor ax, ax
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov sp, 0x7C00
 
-    ; Display a splash screen
-    call splash_screen
+    ; Display welcome message
+    mov si, welcome_msg
+    call print_string
 
-    ; Print "Welcome to SpringOS!"
-    mov si, welcome_msg  ; Load the address of the message
-    call print_string    ; Call the print function
+    ; Load kernel
+    call load_kernel
 
-    ; Perform a memory check
-    call memory_check
+    ; Jump to kernel
+    jmp 0x1000:0000
 
-    ; Load and execute the kernel
-    mov ax, 0x0800       ; Segment where the kernel will be loaded
-    mov es, ax           ; Set ES to this segment
-    xor bx, bx           ; Offset 0x0000
-    mov ah, 0x02         ; BIOS read sectors function
-    mov al, 0x10         ; Read 16 sectors
-    mov ch, 0            ; Cylinder 0
-    mov cl, 2            ; Start reading from sector 2
-    mov dh, 0            ; Head 0
-    mov dl, 0            ; Drive 0 (first floppy)
-    int 0x13             ; BIOS disk interrupt
-    jc disk_error        ; Jump to error if carry flag is set
-
-    ; Jump to kernel entry point
-    jmp 0x0800:0000
+load_kernel:
+    mov ah, 0x02    ; BIOS read sectors function
+    mov al, 32      ; Number of sectors to read (16 KB)
+    mov ch, 0       ; Cylinder 0
+    mov cl, 2       ; Start from sector 2
+    mov dh, 0       ; Head 0
+    mov dl, 0x80    ; Boot drive (usually 0x80 for hard disk)
+    mov bx, 0x1000  ; ES:BX points to 0x1000:0000
+    mov es, bx
+    xor bx, bx
+    int 0x13        ; BIOS interrupt
+    jc disk_error
+    ret
 
 disk_error:
     mov si, error_msg
     call print_string
-    hlt                 ; Halt the CPU
-
-memory_check:
-    ; Check and display available memory
-    mov ah, 0x88         ; BIOS function to get extended memory size
-    int 0x15
-    mov si, mem_msg
-    call print_string
-    mov ax, cx          ; Store extended memory in AX
-    call print_hex       ; Print memory size in KB
-    ret
-
-splash_screen:
-    mov si, splash_msg
-    call print_string
-    ret
-
-hang:
-    jmp hang             ; Infinite loop
+    jmp $
 
 print_string:
-    ; Print the string pointed to by SI
-    mov ah, 0x0E         ; BIOS teletype function
-.next_char:
-    lodsb                ; Load byte at DS:SI into AL and increment SI
-    cmp al, 0            ; Check for null terminator
-    je .done             ; If null, we're done
-    int 0x10             ; Print the character in AL
-    jmp .next_char       ; Repeat for the next character
+    lodsb
+    or al, al
+    jz .done
+    mov ah, 0x0E
+    int 0x10
+    jmp print_string
 .done:
     ret
 
-print_hex:
-    ; Print AX in hexadecimal format
-    push ax
-    mov cx, 4            ; Four hexadecimal digits
-.next_digit:
-    rol ax, 4            ; Rotate left by 4 bits
-    mov bl, al           ; Copy the lowest nibble to BL
-    and bl, 0x0F         ; Mask the lower 4 bits
-    add bl, '0'          ; Convert to ASCII
-    cmp bl, '9'
-    jbe .print
-    add bl, 7            ; Adjust for A-F
-.print:
-    mov ah, 0x0E
-    int 0x10
-    loop .next_digit
-    pop ax
-    ret
-
 section .data
-welcome_msg db 'Welcome to SpringOS!', 0
-error_msg db 'Disk error! Halting...', 0
-mem_msg db 'Available memory: ', 0
-splash_msg db '*** SpringOS Bootloader ***', 0
+welcome_msg db 'SpringOS Bootloader', 13, 10, 0
+error_msg db 'Disk error!', 13, 10, 0
+
+times 510-($-$$) db 0
+dw 0xAA55

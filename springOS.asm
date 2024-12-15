@@ -1,14 +1,14 @@
-; springOS.asm - by tyshaun
+; springOS.asm - kernel for SpringOS
 
-[org 0x10000]
 [bits 16]
+[org 0x8000]
 
 section .text
 global _start
 
 _start:
     ; Set up segments
-    mov ax, 0x1000
+    mov ax, 0x0800
     mov ds, ax
     mov es, ax
     mov fs, ax
@@ -19,7 +19,6 @@ _start:
     ; Initialize system
     call init_video
     call init_interrupts
-    call init_filesystem
 
     ; Start command-line interface
     call start_cli
@@ -38,11 +37,7 @@ init_interrupts:
     mov ax, 0
     mov es, ax
     mov word [es:0x21*4], keyboard_handler
-    mov word [es:0x21*4+2], 0x1000
-    ret
-
-init_filesystem:
-    ; Placeholder for filesystem initialization
+    mov word [es:0x21*4+2], 0x0800
     ret
 
 keyboard_handler:
@@ -85,8 +80,8 @@ execute_command:
     je .help
     cmp byte [si], 'e'
     je .exit
-    cmp byte [si], 'c'
-    je .clear
+    cmp byte [si], 's'
+    je .sysinfo
     jmp .unknown
 
 .help:
@@ -98,8 +93,8 @@ execute_command:
     call print_string
     ret
 
-.clear:
-    call init_video
+.sysinfo:
+    call display_sysinfo
     jmp .return
 
 .unknown:
@@ -111,14 +106,49 @@ execute_command:
 .return:
     ret
 
+display_sysinfo:
+    mov si, sysinfo_msg
+    call print_string
+    call memory_check
+    ret
+
+memory_check:
+    mov ah, 0x88
+    int 0x15
+    mov si, mem_msg
+    call print_string
+    mov ax, cx
+    call print_hex
+    ret
+
 print_string:
+    mov ah, 0x0E
+.next_char:
     lodsb
     or al, al
     jz .done
-    mov ah, 0x0E
     int 0x10
-    jmp print_string
+    jmp .next_char
 .done:
+    ret
+
+print_hex:
+    push ax
+    mov cx, 4
+.next_digit:
+    rol ax, 4
+    mov dl, al
+    and dl, 0x0F
+    add dl, '0'
+    cmp dl, '9'
+    jbe .print
+    add dl, 7
+.print:
+    mov ah, 0x0E
+    mov al, dl
+    int 0x10
+    loop .next_digit
+    pop ax
     ret
 
 str_to_lower:
@@ -142,9 +172,11 @@ str_to_lower:
 section .data
 welcome_msg db 'Welcome to SpringOS!', 13, 10, 0
 prompt db 'SpringOS> ', 0
-help_msg db 'Commands: help, exit, clear', 13, 10, 0
+help_msg db 'Commands: help, exit, sysinfo', 13, 10, 0
 exit_msg db 'Exiting SpringOS...', 13, 10, 0
 unknown_msg db 'Unknown command. Type "help" for a list of commands.', 13, 10, 0
+sysinfo_msg db 'System Information:', 13, 10, 0
+mem_msg db 'Available memory: ', 0
 
 section .bss
 input_buffer resb 256

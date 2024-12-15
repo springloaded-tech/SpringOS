@@ -1,7 +1,6 @@
-; boot.asm - G.O.O.D music
-
-[org 0x7C00]
+; boot.asm - bootloader
 [bits 16]
+[org 0x7C00]
 
 section .text
 global _start
@@ -22,18 +21,18 @@ _start:
     call load_kernel
 
     ; Jump to kernel
-    jmp 0x1000:0000
+    jmp 0x0800:0000
 
 load_kernel:
+    mov ax, 0x0800  ; Segment where the kernel will be loaded
+    mov es, ax
+    xor bx, bx      ; Offset 0x0000
     mov ah, 0x02    ; BIOS read sectors function
-    mov al, 32      ; Number of sectors to read (16 KB)
+    mov al, 16      ; Read 16 sectors (8 KB)
     mov ch, 0       ; Cylinder 0
     mov cl, 2       ; Start from sector 2
     mov dh, 0       ; Head 0
     mov dl, 0x80    ; Boot drive (usually 0x80 for hard disk)
-    mov bx, 0x1000  ; ES:BX points to 0x1000:0000
-    mov es, bx
-    xor bx, bx
     int 0x13        ; BIOS interrupt
     jc disk_error
     ret
@@ -44,12 +43,13 @@ disk_error:
     jmp $
 
 print_string:
+    mov ah, 0x0E    ; BIOS teletype function
+.next_char:
     lodsb
     or al, al
     jz .done
-    mov ah, 0x0E
     int 0x10
-    jmp print_string
+    jmp .next_char
 .done:
     ret
 

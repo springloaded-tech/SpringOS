@@ -1,143 +1,150 @@
 ; springOS.asm - Kernel for SpringOS
 ; Created by Tyshaun, SpringLoaded Tech.
 
+[org 0x7C00]                ; Origin for boot sector (512-byte boundary)
+
 section .text
-    global start_kernel
+_start:
+    cli                     ; Disable interrupts
+    xor ax, ax              ; Clear AX register
+    mov ds, ax              ; Set data segment to 0
+    mov es, ax              ; Set extra segment to 0
 
-start_kernel:
-    ; Initialize multitasking
+    ; Print welcome message
+    mov si, welcome_msg
+    call print_string
+
+    ; Initialize subsystems
     call init_multitasking
-
-    ; Initialize filesystem (FAT12)
     call init_filesystem
 
     ; Display system status
     call display_status
 
-    ; Start command-line interface (CLI)
+    ; Start command-line interface
     call start_cli
 
-    ; Halt CPU when CLI exits
-    cli
+    ; Halt when CLI exits
     hlt
 
 init_multitasking:
-    ; Basic round-robin multitasking setup
-    ; Placeholder: Switch between dummy tasks
+    ; Placeholder for multitasking initialization
     mov si, multitask_msg
     call print_string
     ret
 
 init_filesystem:
-    ; FAT12 Initialization Placeholder
+    ; Placeholder for FAT12 initialization
     mov si, filesystem_msg
     call print_string
     ret
 
 display_status:
-    ; Show system information (uptime, memory, tasks)
     mov si, status_msg
     call print_string
     call memory_check
     ret
 
 start_cli:
-    ; Basic command-line interface
 .cli_loop:
-    lea si, prompt_msg
+    mov si, prompt_msg
     call print_string
-    call read_input        ; Read user command
-    call execute_command   ; Execute the command
+    call read_input
+    call execute_command
     jmp .cli_loop
 
 read_input:
-    ; Read user input into input_buffer
-    mov ah, 0x0A           ; BIOS Input function
-    lea dx, input_buffer
-    int 0x21               ; Read input
+    ; Read input into input_buffer
+    mov ah, 0x0A            ; DOS input function (requires DOSBox)
+    lea dx, [input_buffer]  ; Address of input buffer
+    int 0x21
     ret
 
 execute_command:
-    ; Execute basic commands (help, ls, cat, sysinfo)
-    lea si, input_buffer + 1 ; Skip length byte
-    cmp byte [si], 'h'     ; Check if command is 'help'
+    lea si, [input_buffer + 2] ; Skip length and CR byte
+    cmp byte [si], 'h'
     je .run_help
-    cmp byte [si], 'l'     ; Check if command is 'ls'
+    cmp byte [si], 'l'
     je .run_ls
-    cmp byte [si], 'c'     ; Check if command is 'cat'
+    cmp byte [si], 'c'
     je .run_cat
-    cmp byte [si], 's'     ; Check if command is 'sysinfo'
+    cmp byte [si], 's'
     je .run_sysinfo
     jmp .unknown_command
 
 .run_help:
-    lea si, help_msg
+    mov si, help_msg
     call print_string
     ret
 
 .run_ls:
-    lea si, ls_msg
+    mov si, ls_msg
     call print_string
     ret
 
 .run_cat:
-    lea si, cat_msg
+    mov si, cat_msg
     call print_string
     ret
 
 .run_sysinfo:
-    lea si, sysinfo_msg
+    mov si, sysinfo_msg
     call print_string
-    call memory_check      ; Display available memory
+    call memory_check
     ret
 
 .unknown_command:
-    lea si, unknown_msg
+    mov si, unknown_msg
     call print_string
     ret
 
 memory_check:
-    ; Check and display available memory
-    mov ah, 0x88           ; BIOS function to get extended memory size
+    mov ah, 0x88            ; BIOS function for memory
     int 0x15
     mov si, mem_msg
     call print_string
-    mov ax, cx             ; Extended memory in KB
-    call print_hex         ; Print in hex format
+    mov ax, cx              ; Memory size in KB
+    call print_hex
     ret
 
 print_string:
-    ; Print the string pointed to by SI
-    mov ah, 0x0E           ; BIOS teletype function
+    ; Print the string at DS:SI
 .next_char:
-    lodsb                  ; Load byte at DS:SI into AL and increment SI
-    cmp al, 0              ; Check for null terminator
-    je .done               ; If null, we’re done
-    int 0x10               ; Print the character in AL
-    jmp .next_char         ; Repeat for the next character
+    lodsb                   ; Load byte from DS:SI into AL
+    or al, al               ; Check for null terminator
+    jz .done
+    mov ah, 0x0E            ; BIOS teletype
+    int 0x10
+    jmp .next_char
 .done:
     ret
 
 print_hex:
-    ; Print AX in hexadecimal format
-    push ax
-    mov cx, 4              ; Four hexadecimal digits
+    ; Print AX in hex
+    pusha
+    mov cx, 4
 .next_digit:
-    rol ax, 4              ; Rotate left by 4 bits
-    mov bl, al             ; Copy the lowest nibble to BL
-    and bl, 0x0F           ; Mask the lower 4 bits
-    add bl, '0'            ; Convert to ASCII
+    rol ax, 4
+    mov bl, al
+    and bl, 0x0F
+    add bl, '0'
     cmp bl, '9'
-    jbe .print
-    add bl, 7              ; Adjust for A-F
-.print:
+    jbe .output
+    add bl, 7
+.output:
     mov ah, 0x0E
+    mov al, bl
     int 0x10
     loop .next_digit
-    pop ax
+    popa
     ret
 
+; Bootloader padding
+times 510-($-$$) db 0
+dw 0xAA55               ; Boot signature
+
 section .data
+welcome_msg db 'Welcome to SpringOS!', 0
 prompt_msg db 'SpringOS> ', 0
 help_msg db 'Commands: help, ls, cat, sysinfo', 0
 ls_msg db 'Listing files... (not yet implemented)', 0
@@ -145,9 +152,9 @@ cat_msg db 'Displaying file... (not yet implemented)', 0
 sysinfo_msg db 'System Information:', 0
 unknown_msg db 'Unknown command. Try again.', 0
 mem_msg db 'Memory Available: ', 0
-status_msg db 'System Status: Multitasking and FAT12 ready.', 0
+status_msg db 'System Status: All systems go!', 0
 multitask_msg db 'Multitasking initialized.', 0
 filesystem_msg db 'FAT12 Filesystem initialized.', 0
 
 section .bss
-input_buffer resb 128          ; Reserve space for input buffer
+input_buffer resb 128

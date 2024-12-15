@@ -1,160 +1,150 @@
-; springOS.asm - Kernel for SpringOS
-; Created by Tyshaun, SpringLoaded Tech.
+; springOS.asm - by tyshaun
 
-[org 0x7C00]                ; Origin for boot sector (512-byte boundary)
+[org 0x10000]
+[bits 16]
 
 section .text
+global _start
+
 _start:
-    cli                     ; Disable interrupts
-    xor ax, ax              ; Clear AX register
-    mov ds, ax              ; Set data segment to 0
-    mov es, ax              ; Set extra segment to 0
+    ; Set up segments
+    mov ax, 0x1000
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    mov sp, 0xFFFE
 
-    ; Print welcome message
-    mov si, welcome_msg
-    call print_string
-
-    ; Initialize subsystems
-    call init_multitasking
+    ; Initialize system
+    call init_video
+    call init_interrupts
     call init_filesystem
-
-    ; Display system status
-    call display_status
 
     ; Start command-line interface
     call start_cli
 
-    ; Halt when CLI exits
+    ; Halt if CLI exits
+    cli
     hlt
 
-init_multitasking:
-    ; Placeholder for multitasking initialization
-    mov si, multitask_msg
-    call print_string
+init_video:
+    mov ax, 0x0003  ; 80x25 text mode
+    int 0x10
+    ret
+
+init_interrupts:
+    ; Set up basic interrupt handler
+    mov ax, 0
+    mov es, ax
+    mov word [es:0x21*4], keyboard_handler
+    mov word [es:0x21*4+2], 0x1000
     ret
 
 init_filesystem:
-    ; Placeholder for FAT12 initialization
-    mov si, filesystem_msg
-    call print_string
+    ; Placeholder for filesystem initialization
     ret
 
-display_status:
-    mov si, status_msg
-    call print_string
-    call memory_check
-    ret
+keyboard_handler:
+    ; Basic keyboard handler
+    in al, 0x60     ; Read scan code
+    iret
 
 start_cli:
+    mov si, welcome_msg
+    call print_string
+
 .cli_loop:
-    mov si, prompt_msg
+    mov si, prompt
     call print_string
     call read_input
     call execute_command
     jmp .cli_loop
 
 read_input:
-    ; Read input into input_buffer
-    mov ah, 0x0A            ; DOS input function (requires DOSBox)
-    lea dx, [input_buffer]  ; Address of input buffer
-    int 0x21
+    mov di, input_buffer
+    xor cx, cx
+.read_char:
+    mov ah, 0
+    int 0x16
+    cmp al, 13  ; Enter key
+    je .done
+    stosb
+    inc cx
+    mov ah, 0x0E
+    int 0x10
+    jmp .read_char
+.done:
+    mov byte [di], 0
     ret
 
 execute_command:
-    lea si, [input_buffer + 2] ; Skip length and CR byte
+    mov si, input_buffer
+    call str_to_lower
     cmp byte [si], 'h'
-    je .run_help
-    cmp byte [si], 'l'
-    je .run_ls
+    je .help
+    cmp byte [si], 'e'
+    je .exit
     cmp byte [si], 'c'
-    je .run_cat
-    cmp byte [si], 's'
-    je .run_sysinfo
-    jmp .unknown_command
+    je .clear
+    jmp .unknown
 
-.run_help:
+.help:
     mov si, help_msg
+    jmp .print_and_return
+
+.exit:
+    mov si, exit_msg
     call print_string
     ret
 
-.run_ls:
-    mov si, ls_msg
-    call print_string
-    ret
+.clear:
+    call init_video
+    jmp .return
 
-.run_cat:
-    mov si, cat_msg
-    call print_string
-    ret
-
-.run_sysinfo:
-    mov si, sysinfo_msg
-    call print_string
-    call memory_check
-    ret
-
-.unknown_command:
+.unknown:
     mov si, unknown_msg
-    call print_string
-    ret
 
-memory_check:
-    mov ah, 0x88            ; BIOS function for memory
-    int 0x15
-    mov si, mem_msg
+.print_and_return:
     call print_string
-    mov ax, cx              ; Memory size in KB
-    call print_hex
+
+.return:
     ret
 
 print_string:
-    ; Print the string at DS:SI
-.next_char:
-    lodsb                   ; Load byte from DS:SI into AL
-    or al, al               ; Check for null terminator
+    lodsb
+    or al, al
     jz .done
-    mov ah, 0x0E            ; BIOS teletype
+    mov ah, 0x0E
     int 0x10
-    jmp .next_char
+    jmp print_string
 .done:
     ret
 
-print_hex:
-    ; Print AX in hex
-    pusha
-    mov cx, 4
-.next_digit:
-    rol ax, 4
-    mov bl, al
-    and bl, 0x0F
-    add bl, '0'
-    cmp bl, '9'
-    jbe .output
-    add bl, 7
-.output:
-    mov ah, 0x0E
-    mov al, bl
-    int 0x10
-    loop .next_digit
-    popa
+str_to_lower:
+    push si
+.loop:
+    lodsb
+    or al, al
+    jz .done
+    cmp al, 'A'
+    jb .next
+    cmp al, 'Z'
+    ja .next
+    add al, 32
+    mov [si-1], al
+.next:
+    jmp .loop
+.done:
+    pop si
     ret
 
-; Bootloader padding
-times 510-($-$$) db 0
-dw 0xAA55               ; Boot signature
-
 section .data
-welcome_msg db 'Welcome to SpringOS!', 0
-prompt_msg db 'SpringOS> ', 0
-help_msg db 'Commands: help, ls, cat, sysinfo', 0
-ls_msg db 'Listing files... (not yet implemented)', 0
-cat_msg db 'Displaying file... (not yet implemented)', 0
-sysinfo_msg db 'System Information:', 0
-unknown_msg db 'Unknown command. Try again.', 0
-mem_msg db 'Memory Available: ', 0
-status_msg db 'System Status: All systems go!', 0
-multitask_msg db 'Multitasking initialized.', 0
-filesystem_msg db 'FAT12 Filesystem initialized.', 0
+welcome_msg db 'Welcome to SpringOS!', 13, 10, 0
+prompt db 'SpringOS> ', 0
+help_msg db 'Commands: help, exit, clear', 13, 10, 0
+exit_msg db 'Exiting SpringOS...', 13, 10, 0
+unknown_msg db 'Unknown command. Type "help" for a list of commands.', 13, 10, 0
 
 section .bss
-input_buffer resb 128
+input_buffer resb 256
